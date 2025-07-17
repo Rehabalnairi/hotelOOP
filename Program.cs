@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.Design;
 using System.Security.Cryptography.X509Certificates;
 using System.Transactions;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace hotelOOP
 {
@@ -98,7 +99,8 @@ namespace hotelOOP
                 Console.WriteLine("2. View Rooms");
                 Console.WriteLine("3. View Reservations");
                 Console.WriteLine("4. Search Reservation by Guest Name");
-                Console.WriteLine("5. Exit");
+                Console.WriteLine("5. Cancel a reservation");
+                Console.WriteLine("6. Exit");
                 Console.Write("Choose an option: ");
                 string Amdminchoice = Console.ReadLine();
                 switch (Amdminchoice)
@@ -115,7 +117,10 @@ namespace hotelOOP
                         case "4":
                         ShowHighestPayingGuest();
                         break;
-                    case "5":
+                    case"5":
+                        CancelReservation();
+                        break;
+                    case "6":
 
                         return;
                     default:
@@ -151,10 +156,10 @@ namespace hotelOOP
 
             static void AddRoom()
             {
-                
+                // This method allows the admin to add a new room to the hotel
+               // Rate must be >= 100
                 Console.Write("Enter Room Number: ");
                 int number = int.Parse(Console.ReadLine());
-
                 Console.Write("Enter Room Type: ");
                 string type = Console.ReadLine();
 
@@ -167,7 +172,7 @@ namespace hotelOOP
 
             }
 
-
+            // This method allows the user to view all available rooms in the hotel
             static void ViewRooms()
             {
                 Console.WriteLine("Available Rooms:");
@@ -183,7 +188,7 @@ namespace hotelOOP
                     }
                 }
             }
-
+            // This method allows the user to make a reservation for a room
             static void Reservation()
             {
 
@@ -191,7 +196,7 @@ namespace hotelOOP
                 string guestName = Console.ReadLine();
 
                 Console.WriteLine("\nAvailable Rooms:");
-                bool hasAvailable = false;
+                bool hasAvailable = false; // Create varibale for check is there avaiable room or not 
                 foreach (var room in roomList)
                 {
                     if (!room.isAvailable)
@@ -214,7 +219,7 @@ namespace hotelOOP
                     return;
                 }
 
-                Room selectedRoom = roomList.Find(r => r.roomNumber == roomNumber && !r.isAvailable);
+                Room selectedRoom = roomList.Find(r => r.roomNumber == roomNumber && !r.isAvailable); //  add find room to the list 
 
                 if (selectedRoom != null)
                 {
@@ -226,8 +231,8 @@ namespace hotelOOP
                     Console.WriteLine(" Room not available or invalid number.");
                 }
             }
-        
 
+            // This method allows the admin to view all reservations made by guests
             static void ViewReservations()
             {
                 Console.WriteLine("Reservations:");
@@ -244,7 +249,7 @@ namespace hotelOOP
                 }
 
             }
-
+            // This method allows the admin to search for a reservation by guest name
             static void SearchReservationByGuest()
             {
                 Console.Write("Enter guest name to search: ");
@@ -265,7 +270,7 @@ namespace hotelOOP
                     Console.WriteLine("No reservation found for that name.");
                 }
             }
-
+            // This method shows the highest paying guest based on the room price
             static void ShowHighestPayingGuest()
             {
                 if (reservationList.Count == 0)
@@ -291,7 +296,27 @@ namespace hotelOOP
                 Console.WriteLine($"Date: {highest.Date}");
             }
 
-
+            //Cancel a reservation by room number
+            static void CancelReservation()
+            {
+                Console.Write("Enter room number to cancel reservation: ");
+                if (!int.TryParse(Console.ReadLine(), out int roomNumber))
+                {
+                    Console.WriteLine("Invalid number.");
+                    return;
+                }
+                Reservation reservationToCancel = reservationList.Find(r => r.ReserverRoom.roomNumber == roomNumber);
+                if (reservationToCancel != null)
+                {
+                    reservationList.Remove(reservationToCancel);
+                    reservationToCancel.ReserverRoom.isAvailable = true; // Mark room as available
+                    Console.WriteLine("Reservation cancelled successfully.");
+                }
+                else
+                {
+                    Console.WriteLine("No reservation found for that room number.");
+                }
+            }
 
         }
     }
