@@ -109,18 +109,21 @@ namespace hotelOOP
                         AddRoom();
                         break;
                     case "2":
-                        ViewReservations();
+                        ViewRooms();
                         break;
                     case "3":
+                        ViewReservations();
+                        break;
+                    case "4":
                         SearchReservationByGuest();
                         break;
-                        case "4":
+                        case "5":
                         ShowHighestPayingGuest();
                         break;
-                    case"5":
+                    case"6":
                         CancelReservation();
                         break;
-                    case "6":
+                    case "7":
 
                         return;
                     default:
@@ -157,7 +160,14 @@ namespace hotelOOP
             static void AddRoom()
             {
                 // This method allows the admin to add a new room to the hotel
-               // Rate must be >= 100
+                // Rate must be >= 100
+                Console.Clear();
+                Console.WriteLine("Add New Room:");
+                if (roomList.Count >= 100)
+                {
+                    Console.WriteLine("Cannot add more than 10 rooms.");
+                    return;
+                }
                 Console.Write("Enter Room Number: ");
                 int number = int.Parse(Console.ReadLine());
                 Console.Write("Enter Room Type: ");
