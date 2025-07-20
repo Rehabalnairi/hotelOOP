@@ -26,8 +26,17 @@ namespace hotelOOP
             string availability = isAvailable ? "Available" : "Reserved";
             return $"Room Number: {roomNumber}, Type: {roomType}, Price: {price}, Status: {availability}";
         }
+        public string ToFileString()
+        {
+            return $"{roomNumber}|{roomType}|{price}|{isAvailable}";
+        }
 
-
+        public static Room FromFileString(string fileString)
+        {
+            string[] parts = fileString.Split('|');
+            if (parts.Length != 4) throw new FormatException("Invalid room data format.");
+            return new Room(int.Parse(parts[0]), parts[1], double.Parse(parts[2]), bool.Parse(parts[3]));
+        }
 
     }
 
@@ -37,37 +46,71 @@ namespace hotelOOP
         public string GstName { get; set; }
         public Room ReserverRoom { get; set; }
         public DateTime Date { get; set; }
-         public int Nights { get; set; } // Number of nights reserved
+        public int Nights { get; set; } // Number of nights reserved
         public double TotalCost { set; get; }
-        public Reservation(string gstName, Room Room,int nights)
+        public Reservation(string gstName, Room Room, int nights)
         {
             GstName = gstName;
             ReserverRoom = Room;
             Date = DateTime.Now;
             Nights = nights; // Initialize the number of nights reserved
             Room.isAvailable = false; // Mark room as reserved
-            TotalCost =Room.price* Nights;
+            TotalCost = Room.price * Nights;
         }
 
-  
+
 
         public override string ToString()
         {
             return $"Reservation for {GstName} on {Date.ToShortDateString()} - Room {ReserverRoom.roomNumber}, Type: {ReserverRoom.roomType}, " +
                    $"Rate: {ReserverRoom.price}/night, Nights: {Nights}, Total: ${TotalCost}";
         }
-    
-}
+
+        public string ToFileString()
+        {
+            return $"{GstName}|{ReserverRoom.roomNumber}|{ReserverRoom.roomType}|{ReserverRoom.price}|{Nights}|{Date}";
+        }
+
+        public static Reservation FromFileString(string fileString)
+        {
+            string[] parts = fileString.Split('|');
+            if (parts.Length != 6) throw new FormatException("Invalid reservation data format.");
+
+            string name = parts[0];
+            int roomNumber = int.Parse(parts[1]);
+            string type = parts[2];
+            double price = double.Parse(parts[3]);
+            int nights = int.Parse(parts[4]);
+            DateTime date = DateTime.Parse(parts[5]);
+
+            Room existingRoom = Program.roomList.Find(r => r.roomNumber == roomNumber);
+            if (existingRoom == null)
+            {
+                existingRoom = new Room(roomNumber, type, price, false);
+                Program.roomList.Add(existingRoom);
+            }
+
+            Reservation r = new Reservation(name, existingRoom, nights);
+            r.Date = date;
+            return r;
+        }
+
+
+
+    }
+
+
     internal class Program
     {
-        static string reservationFilePath = "reservations.txt"; // File path for reservations
-        static  List<Room> roomList = new List<Room>();
-       static  List<Reservation> reservationList = new List<Reservation>();
+        public static string reservationFilePath = "reservations.txt";
+        public static string roomFilePath = "rooms.txt";
+        public static List<Room> roomList = new List<Room>();
+        public static List<Reservation> reservationList = new List<Reservation>();
         static void Main(string[] args)
         {
             // Load existing reservations from file
             LoadReservationsFromFile();
-
+            LoadData(); // Load rooms and reservations from files
             //List<Room> roomList = new List<Room>();
             while (true)
             {
@@ -76,9 +119,6 @@ namespace hotelOOP
                 Console.WriteLine("2. User mune");
                 Console.WriteLine("3. Exit");
                 Console.Write("Choose an option: ");
-
-
-
                 string choice = Console.ReadLine();
 
                 switch (choice)
@@ -96,6 +136,7 @@ namespace hotelOOP
                         return;
                     default:
                         Console.WriteLine("Invalid choice, please try again.");
+                        Console.ReadKey();
                         break;
                 }
 
@@ -103,6 +144,7 @@ namespace hotelOOP
                 {
                     SaveReservationsToFile(); // Save on exit
                     Console.WriteLine("Exiting the system. Goodbye!");
+
                     return;
                 }
             }
@@ -110,69 +152,86 @@ namespace hotelOOP
 
             static void AdminMenu()
             {
-                Console.Clear();
-                Console.WriteLine("Admin Menu:");
-                Console.WriteLine("1. Add Room");
-                Console.WriteLine("2. View Rooms");
-                Console.WriteLine("3. View Reservations");
-                Console.WriteLine("4. Search Reservation by Guest Name");
-                Console.WriteLine("5. Cancel a reservation");
-                Console.WriteLine("6. Exit");
-                Console.Write("Choose an option: ");
-                string Amdminchoice = Console.ReadLine();
-                switch (Amdminchoice)
+                while (true)
                 {
-                    case "1":
-                        AddRoom();
-                        break;
-                    case "2":
-                        ViewRooms();
-                        break;
-                    case "3":
-                        ViewReservations();
-                        break;
-                    case "4":
-                        SearchReservationByGuest();
-                        break;
+                    Console.Clear();
+                    Console.WriteLine("Admin Menu:");
+                    Console.WriteLine("1. Add Room");
+                    Console.WriteLine("2. View Rooms");
+                    Console.WriteLine("3. View Reservations");
+                    Console.WriteLine("4. Search Reservation by Guest Name");
+                    Console.WriteLine("5 .Show Highest Paying Guest");
+                    Console.WriteLine("6. CancelReservation");
+                    Console.WriteLine("7. Exit");
+                    Console.Write("Choose an option: ");
+                    string Amdminchoice = Console.ReadLine();
+                    switch (Amdminchoice)
+                    {
+                        case "1":
+                            AddRoom();
+                            break;
+                        case "2":
+                            ViewRooms();
+                            break;
+                        case "3":
+                            ViewReservations();
+                            break;
+                        case "4":
+                            SearchReservationByGuest();
+                            break;
                         case "5":
-                        ShowHighestPayingGuest();
-                        break;
-                    case"6":
-                        CancelReservation();
-                        break;
-                    case "7":
-
-                        return;
-                    default:
-                        Console.WriteLine("Invalid choice, please try again.");
-                        break;
+                            ShowHighestPayingGuest();
+                            break;
+                        case "6":
+                            CancelReservation();
+                            break;
+                        case "7":
+                            SaveReservationsToFile(); // Save before exiting
+                            Console.WriteLine("Exiting Admin Menu. Goodbye!");
+                            return;
+                        default:
+                            Console.WriteLine("Invalid choice, please try again.");
+                            Console.ReadKey();
+                            break;
+                    }
+                    Console.WriteLine("Press any key to return to the Admin Menu...");
+                    Console.ReadKey();
                 }
             }
+            SaveData(); // Save data to files at the end of the program
 
             static void UserMenu()
             {
-                Console.Clear();
-                Console.WriteLine("User Menu:");
-                Console.WriteLine("1. View Rooms");
-                Console.WriteLine("2. Make Reservation");
-                Console.WriteLine("3. Back to main menu");
-                Console.Write("Choose an option: ");
-                string choice = Console.ReadLine();
-                switch (choice)
+                while (true)
                 {
-                    case "1":
-                        ViewRooms();
-                        break;
-                    case "2":
-                        Reservation();
-                        break;
-                    case "3":
-                        return;
-                    default:
-                        Console.WriteLine("Invalid choice, please try again.");
-                        break;
+                    Console.Clear();
+                    Console.WriteLine("User Menu:");
+                    Console.WriteLine("1. View Rooms");
+                    Console.WriteLine("2. Make Reservation");
+                    Console.WriteLine("3. Back to main menu");
+                    Console.Write("Choose an option: ");
+                    string choice = Console.ReadLine();
+
+                    switch (choice)
+                    {
+                        case "1":
+                            ViewRooms();
+                            break;
+                        case "2":
+                            Reservation();
+                            break;
+                        case "3":
+                            return;
+                        default:
+                            Console.WriteLine("Invalid choice, please try again.");
+                            break;
+                    }
+
+                    Console.WriteLine("\nPress any key to return to the User Menu...");
+                    Console.ReadKey(); //This line was missing
                 }
             }
+
 
             static void AddRoom()
             {
@@ -187,17 +246,17 @@ namespace hotelOOP
                 }
 
                 Console.Write("Enter Room Number: ");
-                if(!int.TryParse(Console.ReadLine(), out int roomNumber) || roomNumber <= 0)
+                if (!int.TryParse(Console.ReadLine(), out int roomNumber) || roomNumber <= 0)
                 {
                     Console.WriteLine("Invalid room number.");
                     return;
                 }
-                if(roomList.Any(r => r.roomNumber == roomNumber))
+                if (roomList.Any(r => r.roomNumber == roomNumber))
                 {
                     Console.WriteLine("Room number already exists.");
                     return;
                 }
-                
+
                 Console.Write("Enter Room Type (Single/Double/Suite): ");
                 string type = Console.ReadLine();
 
@@ -211,6 +270,7 @@ namespace hotelOOP
                 //double price = double.Parse(Console.ReadLine());
                 Room newRoom = new Room(roomNumber, type, price, true); // Adjusted constructor
                 roomList.Add(newRoom);
+                SaveData(); // Save room data to file
                 Console.WriteLine(" Room added successfully!");
 
 
@@ -235,6 +295,7 @@ namespace hotelOOP
             // This method allows the user to make a reservation for a room
             static void Reservation()
             {
+                // reserve same room in deffrent time 
                 Console.Clear();
                 Console.Write("Enter your name: ");
                 string guestName = Console.ReadLine();
@@ -242,9 +303,10 @@ namespace hotelOOP
                 Console.Write("Enter number of nights: ");
                 if (!int.TryParse(Console.ReadLine(), out int nights) || nights <= 0)
                 {
-                    Console.WriteLine(" Invalid number of nights.");
+                    Console.WriteLine("Invalid number of nights.");
                     return;
                 }
+
                 Console.WriteLine("\nAvailable Rooms:");
                 foreach (var room in roomList)
                 {
@@ -253,10 +315,11 @@ namespace hotelOOP
                         Console.WriteLine(room);
                     }
                 }
+
                 Console.Write("Enter Room Number to reserve: ");
                 if (!int.TryParse(Console.ReadLine(), out int roomNumber))
                 {
-                    Console.WriteLine(" Invalid room number.");
+                    Console.WriteLine("Invalid room number.");
                     return;
                 }
 
@@ -269,12 +332,14 @@ namespace hotelOOP
                 }
 
                 Reservation newReservation = new Reservation(guestName, selectedRoom, nights);
-                 reservationList.Add(newReservation);
+                reservationList.Add(newReservation);
+                SaveData(); // Save reservation data to file
 
-                Console.WriteLine($"Reservation successful for {guestName}. Total cost: ${newReservation.TotalCost}");
+                Console.WriteLine($"Reservation successful for {guestName}. Total cost: OMR {newReservation.TotalCost}");
             }
-                // This method allows the admin to view all reservations made by guests
-                static void ViewReservations()
+
+            // This method allows the admin to view all reservations made by guests
+            static void ViewReservations()
             {
                 Console.WriteLine("Reservations:");
                 if (reservationList.Count == 0)
@@ -314,9 +379,9 @@ namespace hotelOOP
             // This method shows the highest paying guest based on the room price
             static void ShowHighestPayingGuest()
             {
-               // if  (res.TotalCost > highest.TotalCost)
+                // if  (res.TotalCost > highest.TotalCost)
 
-                 if (reservationList.Count == 0)
+                if (reservationList.Count == 0)
                 {
                     Console.WriteLine(" No reservations found.");
                     return;
@@ -329,7 +394,7 @@ namespace hotelOOP
                     if (res.TotalCost > highest.TotalCost)
                     {
 
-                    
+
                         highest = res;
                     }
                 }
@@ -347,24 +412,22 @@ namespace hotelOOP
             //Cancel a reservation by room number
             static void CancelReservation()
             {
-                Console.Write("Enter room number to cancel reservation: ");
-                if (!int.TryParse(Console.ReadLine(), out int roomNumber))
+                Console.Write("Enter room number to cancel: ");
+                if (!int.TryParse(Console.ReadLine(), out int roomNumber)) return;
+
+                var res = reservationList.Find(r => r.ReserverRoom.roomNumber == roomNumber);
+                if (res != null)
                 {
-                    Console.WriteLine("Invalid number.");
-                    return;
-                }
-                Reservation reservationToCancel = reservationList.Find(r => r.ReserverRoom.roomNumber == roomNumber);
-                if (reservationToCancel != null)
-                {
-                    reservationList.Remove(reservationToCancel);
-                    reservationToCancel.ReserverRoom.isAvailable = true; // Mark room as available
-                    Console.WriteLine("Reservation cancelled successfully.");
+                    res.ReserverRoom.isAvailable = true;
+                    reservationList.Remove(res);
+                    Console.WriteLine("Reservation cancelled.");
                 }
                 else
                 {
-                    Console.WriteLine("No reservation found for that room number.");
+                    Console.WriteLine("No reservation found for that room.");
                 }
             }
+
 
 
             //save reservations to a file
@@ -378,7 +441,11 @@ namespace hotelOOP
                     }
                 }
             }
-
+            static void SaveData()
+            {
+                File.WriteAllLines("rooms.txt", roomList.Select(r => r.ToFileString()));
+                File.WriteAllLines("reservations.txt", reservationList.Select(res => res.ToFileString()));
+            }
             // Load reservations from a file
             static void LoadReservationsFromFile()
             {
@@ -414,12 +481,37 @@ namespace hotelOOP
                 }
             }
 
+          
 
 
+         
+
+        }
+
+        static void LoadData() // Declared as static method of the Program class
+        {
+            if (File.Exists("rooms.txt"))
+            {
+                foreach (var line in File.ReadAllLines("rooms.txt"))
+                {
+                    roomList.Add(Room.FromFileString(line));
+                }
+            }
+
+            if (File.Exists("reservations.txt"))
+            {
+                foreach (var line in File.ReadAllLines("reservations.txt"))
+                {
+                    reservationList.Add(Reservation.FromFileString(line));
+                }
+            }
         }
     }
 }
 
 
-      
+
+
+
+
 
