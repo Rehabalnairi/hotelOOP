@@ -17,7 +17,7 @@ namespace hotelOOP
             this.roomNumber = number;
             this.roomType = type;
             this.price = price;
-            this.isAvailable = false;
+            this.isAvailable = true;
 
         }
 
@@ -165,19 +165,36 @@ namespace hotelOOP
                 Console.WriteLine("Add New Room:");
                 if (roomList.Count >= 100)
                 {
-                    Console.WriteLine("Cannot add more than 10 rooms.");
+                    Console.WriteLine("Cannot add more than 100 rooms.");
                     return;
                 }
+
                 Console.Write("Enter Room Number: ");
-                int number = int.Parse(Console.ReadLine());
-                Console.Write("Enter Room Type: ");
+                if(!int.TryParse(Console.ReadLine(), out int roomNumber) || roomNumber <= 0)
+                {
+                    Console.WriteLine("Invalid room number.");
+                    return;
+                }
+                if(roomList.Any(r => r.roomNumber == roomNumber))
+                {
+                    Console.WriteLine("Room number already exists.");
+                    return;
+                }
+                
+                Console.Write("Enter Room Type (Single/Double/Suite): ");
                 string type = Console.ReadLine();
 
                 Console.Write("Enter Room Price: ");
-                double price = double.Parse(Console.ReadLine());
-                Room newRoom = new Room(number, type, price, true);
+                if (!double.TryParse(Console.ReadLine(), out double price) || price < 100)
+                {
+                    Console.WriteLine("Invalid price. Price must be at least 100.");
+                    return;
+                }
+
+                //double price = double.Parse(Console.ReadLine());
+                Room newRoom = new Room(roomNumber, type, price, true); // Adjusted constructor
                 roomList.Add(newRoom);
-                Console.WriteLine("Room added successfully!");
+                Console.WriteLine(" Room added successfully!");
 
 
             }
