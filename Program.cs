@@ -348,6 +348,18 @@ namespace hotelOOP
                 }
             }
 
+
+
+            tatic void SaveReservationsToFile()
+            {
+                using (StreamWriter writer = new StreamWriter(reservationFile))
+                {
+                    foreach (var res in reservationList)
+                    {
+                        writer.WriteLine($"{res.GstName}|{res.ReserverRoom.roomNumber}|{res.ReserverRoom.roomType}|{res.ReserverRoom.price}|{res.Nights}|{res.Date}");
+                    }
+                }
+            }
         }
     }
 }
