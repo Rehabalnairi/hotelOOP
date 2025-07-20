@@ -349,10 +349,10 @@ namespace hotelOOP
             }
 
 
-
-            tatic void SaveReservationsToFile()
+            //save reservations to a file
+            static void SaveReservationsToFile()
             {
-                using (StreamWriter writer = new StreamWriter(reservationFile))
+                using (StreamWriter writer = new StreamWriter(reservationFilePath))
                 {
                     foreach (var res in reservationList)
                     {
@@ -360,6 +360,44 @@ namespace hotelOOP
                     }
                 }
             }
+
+            // Load reservations from a file
+            static void LoadReservationsFromFile()
+            {
+                if (!File.Exists(reservationFilePath)) return;
+
+                using (StreamReader reader = new StreamReader(reservationFilePath))
+                {
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        string[] parts = line.Split('|');
+                        if (parts.Length == 6)
+                        {
+                            string name = parts[0];
+                            int roomNumber = int.Parse(parts[1]);
+                            string type = parts[2];
+                            double price = double.Parse(parts[3]);
+                            int nights = int.Parse(parts[4]);
+                            DateTime date = DateTime.Parse(parts[5]);
+
+                            Room existingRoom = roomList.Find(r => r.roomNumber == roomNumber);
+                            if (existingRoom == null)
+                            {
+                                existingRoom = new Room(roomNumber, type, price, false);
+                                roomList.Add(existingRoom);
+                            }
+
+                            Reservation r = new Reservation(name, existingRoom, nights);
+                            r.Date = date;
+                            reservationList.Add(r);
+                        }
+                    }
+                }
+            }
+
+
+
         }
     }
 }
