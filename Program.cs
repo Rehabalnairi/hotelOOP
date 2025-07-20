@@ -23,8 +23,8 @@ namespace hotelOOP
 
         public override string ToString()
         {
-            string availability = isAvailable ? "Available" : "Not Available";
-            return $"Room Number: {roomNumber}, Type: {roomType}, Price: {price}, Available: {isAvailable}";
+            string availability = isAvailable ? "Available" : "Reserved";
+            return $"Room Number: {roomNumber}, Type: {roomType}, Price: {price}, Status: {availability}";
         }
 
 
@@ -37,24 +37,30 @@ namespace hotelOOP
         public string GstName { get; set; }
         public Room ReserverRoom { get; set; }
         public DateTime Date { get; set; }
-        public Reservation(string gstName, Room Room)
+         public int Nights { get; set; } // Number of nights reserved
+        public double TotalCost { set; get; }
+        public Reservation(string gstName, Room Room,int nights)
         {
             GstName = gstName;
             ReserverRoom = Room;
             Date = DateTime.Now;
-            Room.isAvailable = true; // Mark room as reserved
-
+            Nights = nights; // Initialize the number of nights reserved
+            Room.isAvailable = false; // Mark room as reserved
+            TotalCost =Room.price* Nights;
         }
+
+  
 
         public override string ToString()
         {
-            return $"Reservation for {GstName} on {Date.ToShortDateString()} for Room: {ReserverRoom.roomNumber}, Type: {ReserverRoom.roomType}, Price: {ReserverRoom.price}";
-
+            return $"Reservation for {GstName} on {Date.ToShortDateString()} - Room {ReserverRoom.roomNumber}, Type: {ReserverRoom.roomType}, " +
+                   $"Rate: {ReserverRoom.price}/night, Nights: {Nights}, Total: ${TotalCost}";
         }
-
-    }
+    
+}
     internal class Program
     {
+        static string reservationFilePath = "reservations.txt"; // File path for reservations
         static  List<Room> roomList = new List<Room>();
        static  List<Reservation> reservationList = new List<Reservation>();
         static void Main(string[] args)
@@ -185,9 +191,9 @@ namespace hotelOOP
                 string type = Console.ReadLine();
 
                 Console.Write("Enter Room Price: ");
-                if (!double.TryParse(Console.ReadLine(), out double price) || price < 100)
+                if (!double.TryParse(Console.ReadLine(), out double price) || price < 10)
                 {
-                    Console.WriteLine("Invalid price. Price must be at least 100.");
+                    Console.WriteLine("Invalid price. Price must be at least 10.");
                     return;
                 }
 
@@ -218,49 +224,46 @@ namespace hotelOOP
             // This method allows the user to make a reservation for a room
             static void Reservation()
             {
-
+                Console.Clear();
                 Console.Write("Enter your name: ");
                 string guestName = Console.ReadLine();
 
+                Console.Write("Enter number of nights: ");
+                if (!int.TryParse(Console.ReadLine(), out int nights) || nights <= 0)
+                {
+                    Console.WriteLine(" Invalid number of nights.");
+                    return;
+                }
                 Console.WriteLine("\nAvailable Rooms:");
-                bool hasAvailable = false; // Create varibale for check is there avaiable room or not 
                 foreach (var room in roomList)
                 {
-                    if (!room.isAvailable)
+                    if (room.isAvailable)
                     {
                         Console.WriteLine(room);
-                        hasAvailable = true;
                     }
                 }
-
-                if (!hasAvailable)
-                {
-                    Console.WriteLine("No available rooms.");
-                    return;
-                }
-
-                Console.Write("Enter room number to reserve: ");
+                Console.Write("Enter Room Number to reserve: ");
                 if (!int.TryParse(Console.ReadLine(), out int roomNumber))
                 {
-                    Console.WriteLine("Invalid number.");
+                    Console.WriteLine(" Invalid room number.");
                     return;
                 }
 
-                Room selectedRoom = roomList.Find(r => r.roomNumber == roomNumber && !r.isAvailable); //  add find room to the list 
+                Room selectedRoom = roomList.Find(r => r.roomNumber == roomNumber && r.isAvailable);
 
-                if (selectedRoom != null)
+                if (selectedRoom == null)
                 {
-                    reservationList.Add(new Reservation(guestName, selectedRoom));
-                    Console.WriteLine("Reservation successful.");
+                    Console.WriteLine("Room not available or does not exist.");
+                    return;
                 }
-                else
-                {
-                    Console.WriteLine(" Room not available or invalid number.");
-                }
+
+                Reservation newReservation = new Reservation(guestName, selectedRoom, nights);
+                 reservationList.Add(newReservation);
+
+                Console.WriteLine($"Reservation successful for {guestName}. Total cost: ${newReservation.TotalCost}");
             }
-
-            // This method allows the admin to view all reservations made by guests
-            static void ViewReservations()
+                // This method allows the admin to view all reservations made by guests
+                static void ViewReservations()
             {
                 Console.WriteLine("Reservations:");
                 if (reservationList.Count == 0)
