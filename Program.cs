@@ -65,7 +65,9 @@ namespace hotelOOP
        static  List<Reservation> reservationList = new List<Reservation>();
         static void Main(string[] args)
         {
-           
+            // Load existing reservations from file
+            LoadReservationsFromFile();
+
             //List<Room> roomList = new List<Room>();
             while (true)
             {
@@ -74,6 +76,8 @@ namespace hotelOOP
                 Console.WriteLine("2. User mune");
                 Console.WriteLine("3. Exit");
                 Console.Write("Choose an option: ");
+
+
 
                 string choice = Console.ReadLine();
 
@@ -93,6 +97,13 @@ namespace hotelOOP
                     default:
                         Console.WriteLine("Invalid choice, please try again.");
                         break;
+                }
+
+                if (choice == "3")
+                {
+                    SaveReservationsToFile(); // Save on exit
+                    Console.WriteLine("Exiting the system. Goodbye!");
+                    return;
                 }
             }
 
@@ -303,7 +314,9 @@ namespace hotelOOP
             // This method shows the highest paying guest based on the room price
             static void ShowHighestPayingGuest()
             {
-                if (reservationList.Count == 0)
+               // if  (res.TotalCost > highest.TotalCost)
+
+                 if (reservationList.Count == 0)
                 {
                     Console.WriteLine(" No reservations found.");
                     return;
@@ -313,17 +326,22 @@ namespace hotelOOP
 
                 foreach (var res in reservationList)
                 {
-                    if (res.ReserverRoom.price > highest.ReserverRoom.price)
+                    if (res.TotalCost > highest.TotalCost)
                     {
+
+                    
                         highest = res;
                     }
                 }
 
-                Console.WriteLine("\n Highest-Paying Guest:");
+
+                Console.WriteLine("\nHighest-Paying Guest:");
                 Console.WriteLine($"Guest: {highest.GstName}");
                 Console.WriteLine($"Room Number: {highest.ReserverRoom.roomNumber}");
-                Console.WriteLine($"Price Paid: omr{highest.ReserverRoom.price}");
-                Console.WriteLine($"Date: {highest.Date}");
+                Console.WriteLine($"Room Type: {highest.ReserverRoom.roomType}");
+                Console.WriteLine($"Nights: {highest.Nights}");
+                Console.WriteLine($"Total Paid: OMR {highest.TotalCost}");
+                Console.WriteLine($"Reservation Date: {highest.Date.ToShortDateString()}");
             }
 
             //Cancel a reservation by room number
