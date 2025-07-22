@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.Design;
+﻿using hotelOOP;
+using System.ComponentModel.Design;
 using System.Security.Cryptography.X509Certificates;
 using System.Transactions;
 using static System.Runtime.InteropServices.JavaScript.JSType;
@@ -6,7 +7,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 namespace hotelOOP
 {
 
-    class Room
+     public class Room
     {
         public int roomNumber { get; set; }
         public string roomType { get; set; }
@@ -17,7 +18,7 @@ namespace hotelOOP
             this.roomNumber = number;
             this.roomType = type;
             this.price = price;
-            this.isAvailable = true;
+            this.isAvailable = isAvailable;
 
         }
 
@@ -40,64 +41,65 @@ namespace hotelOOP
 
     }
 
-    class Reservation
+    public class Reservation
     {
-        //List<Reservation> reservationList = new List<Reservation>();
         public string GstName { get; set; }
         public Room ReserverRoom { get; set; }
-        public DateTime Date { get; set; }
-        public int Nights { get; set; } // Number of nights reserved
-        public double TotalCost { set; get; }
-        public Reservation(string gstName, Room Room, int nights)
+        public int Nights { get; set; }
+        public double TotalCost { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+
+        public Reservation(string gstName, Room room, DateTime startDate, int nights)
         {
             GstName = gstName;
-            ReserverRoom = Room;
-            Date = DateTime.Now;
-            Nights = nights; // Initialize the number of nights reserved
-            Room.isAvailable = false; // Mark room as reserved
-            TotalCost = Room.price * Nights;
+            ReserverRoom = room;
+            StartDate = startDate;
+            Nights = nights;
+            EndDate = startDate.AddDays(nights);
+            TotalCost = room.price * nights;
         }
-
-
 
         public override string ToString()
         {
-            return $"Reservation for {GstName} on {Date.ToShortDateString()} - Room {ReserverRoom.roomNumber}, Type: {ReserverRoom.roomType}, " +
-                   $"Rate: {ReserverRoom.price}/night, Nights: {Nights}, Total: ${TotalCost}";
+            return $"Reservation for {GstName} from {StartDate.ToShortDateString()} to {EndDate.ToShortDateString()} - " +
+                   $"Room {ReserverRoom.roomNumber}, Type: {ReserverRoom.roomType}, Nights: {Nights}, Total: OMR {TotalCost}";
         }
 
         public string ToFileString()
         {
-            return $"{GstName}|{ReserverRoom.roomNumber}|{ReserverRoom.roomType}|{ReserverRoom.price}|{Nights}|{Date}";
+            return $"{GstName}|{ReserverRoom.roomNumber}|{ReserverRoom.roomType}|{ReserverRoom.price}|{Nights}|{StartDate}|{EndDate}";
         }
 
-        public static Reservation FromFileString(string fileString)
+        public static Reservation FromFileString(string line)
         {
-            string[] parts = fileString.Split('|');
-            if (parts.Length != 6) throw new FormatException("Invalid reservation data format.");
+            var parts = line.Split('|');
+            if (parts.Length != 6)
+                throw new FormatException("Invalid reservation line format.");
 
-            string name = parts[0];
+            string guestName = parts[0];
             int roomNumber = int.Parse(parts[1]);
-            string type = parts[2];
+            string roomType = parts[2];
             double price = double.Parse(parts[3]);
             int nights = int.Parse(parts[4]);
-            DateTime date = DateTime.Parse(parts[5]);
+            DateTime startDate = DateTime.Parse(parts[5]);
 
-            Room existingRoom = Program.roomList.Find(r => r.roomNumber == roomNumber);
-            if (existingRoom == null)
+            // Try to get existing room from roomList
+            Room room = Program.roomList.Find(r => r.roomNumber == roomNumber);
+            if (room == null)
             {
-                existingRoom = new Room(roomNumber, type, price, false);
-                Program.roomList.Add(existingRoom);
+                room = new Room(roomNumber, roomType, price, false);
+                Program.roomList.Add(room); // Optional: avoid duplicate room creation later
             }
 
-            Reservation r = new Reservation(name, existingRoom, nights);
-            r.Date = date;
-            return r;
+            return new Reservation(guestName, room, startDate, nights);
         }
 
-
-
     }
+
+
+
+}
 
 
     internal class Program
@@ -110,7 +112,8 @@ namespace hotelOOP
         {
             // Load existing reservations from file
             LoadReservationsFromFile();
-            LoadData(); // Load rooms and reservations from files
+           // LoadRoomsFromFile();
+           LoadData(); // Load rooms and reservations from files
             //List<Room> roomList = new List<Room>();
             while (true)
             {
@@ -292,54 +295,60 @@ namespace hotelOOP
                     }
                 }
             }
-            // This method allows the user to make a reservation for a room
-            static void Reservation()
+        // This method allows the user to make a reservation for a room
+        static void Reservation()
+        {
+            Console.Clear();
+            Console.Write("Enter your name: ");
+            string guestName = Console.ReadLine();
+
+            Console.Write("Enter reservation start date (yyyy-MM-dd): ");
+            if (!DateTime.TryParse(Console.ReadLine(), out DateTime startDate))
             {
-                // reserve same room in deffrent time 
-                Console.Clear();
-                Console.Write("Enter your name: ");
-                string guestName = Console.ReadLine();
-
-                Console.Write("Enter number of nights: ");
-                if (!int.TryParse(Console.ReadLine(), out int nights) || nights <= 0)
-                {
-                    Console.WriteLine("Invalid number of nights.");
-                    return;
-                }
-
-                Console.WriteLine("\nAvailable Rooms:");
-                foreach (var room in roomList)
-                {
-                    if (room.isAvailable)
-                    {
-                        Console.WriteLine(room);
-                    }
-                }
-
-                Console.Write("Enter Room Number to reserve: ");
-                if (!int.TryParse(Console.ReadLine(), out int roomNumber))
-                {
-                    Console.WriteLine("Invalid room number.");
-                    return;
-                }
-
-                Room selectedRoom = roomList.Find(r => r.roomNumber == roomNumber && r.isAvailable);
-
-                if (selectedRoom == null)
-                {
-                    Console.WriteLine("Room not available or does not exist.");
-                    return;
-                }
-
-                Reservation newReservation = new Reservation(guestName, selectedRoom, nights);
-                reservationList.Add(newReservation);
-                SaveData(); // Save reservation data to file
-
-                Console.WriteLine($"Reservation successful for {guestName}. Total cost: OMR {newReservation.TotalCost}");
+                Console.WriteLine("Invalid date.");
+                return;
             }
 
-            // This method allows the admin to view all reservations made by guests
-            static void ViewReservations()
+            Console.Write("Enter number of nights: ");
+            if (!int.TryParse(Console.ReadLine(), out int nights) || nights <= 0)
+            {
+                Console.WriteLine("Invalid number of nights.");
+                return;
+            }
+
+            // Show available rooms
+            Console.WriteLine("\nAvailable Rooms:");
+            foreach (var room in roomList)
+            {
+                if (IsRoomAvailable(room, startDate, nights))
+                {
+                    Console.WriteLine(room);
+                }
+            }
+
+            Console.Write("Enter Room Number to reserve: ");
+            if (!int.TryParse(Console.ReadLine(), out int roomNumber))
+            {
+                Console.WriteLine("Invalid room number.");
+                return;
+            }
+
+            Room selectedRoom = roomList.Find(r => r.roomNumber == roomNumber);
+            if (selectedRoom == null || !IsRoomAvailable(selectedRoom, startDate, nights))
+            {
+                Console.WriteLine("Room not available or does not exist.");
+                return;
+            }
+
+            Reservation newReservation = new Reservation(guestName, selectedRoom, startDate, nights);
+            reservationList.Add(newReservation);
+            SaveData();
+            Console.WriteLine($"Reservation successful for {guestName}. Total cost: OMR {newReservation.TotalCost}");
+        }
+
+
+        // This method allows the admin to view all reservations made by guests
+        static void ViewReservations()
             {
                 Console.WriteLine("Reservations:");
                 if (reservationList.Count == 0)
@@ -376,41 +385,35 @@ namespace hotelOOP
                     Console.WriteLine("No reservation found for that name.");
                 }
             }
-            // This method shows the highest paying guest based on the room price
-            static void ShowHighestPayingGuest()
+        // This method shows the highest paying guest based on the room price
+        static void ShowHighestPayingGuest()
+        {
+            if (Program.reservationList.Count == 0)
             {
-                // if  (res.TotalCost > highest.TotalCost)
-
-                if (reservationList.Count == 0)
-                {
-                    Console.WriteLine(" No reservations found.");
-                    return;
-                }
-
-                Reservation highest = reservationList[0];
-
-                foreach (var res in reservationList)
-                {
-                    if (res.TotalCost > highest.TotalCost)
-                    {
-
-
-                        highest = res;
-                    }
-                }
-
-
-                Console.WriteLine("\nHighest-Paying Guest:");
-                Console.WriteLine($"Guest: {highest.GstName}");
-                Console.WriteLine($"Room Number: {highest.ReserverRoom.roomNumber}");
-                Console.WriteLine($"Room Type: {highest.ReserverRoom.roomType}");
-                Console.WriteLine($"Nights: {highest.Nights}");
-                Console.WriteLine($"Total Paid: OMR {highest.TotalCost}");
-                Console.WriteLine($"Reservation Date: {highest.Date.ToShortDateString()}");
+                Console.WriteLine("No reservations found.");
+                return;
             }
 
-            //Cancel a reservation by room number
-            static void CancelReservation()
+            Reservation highest = Program.reservationList[0];
+
+            foreach (var res in Program.reservationList)
+            {
+                if (res.TotalCost > highest.TotalCost)
+                {
+                    highest = res;
+                }
+            }
+
+            Console.WriteLine("\nHighest-Paying Guest:");
+            Console.WriteLine($"Guest: {highest.GstName}");
+            Console.WriteLine($"Room Number: {highest.ReserverRoom.roomNumber}");
+            Console.WriteLine($"Price Paid: OMR {highest.TotalCost}");
+            Console.WriteLine($"Date: {highest.StartDate.ToShortDateString()}");
+        }
+
+
+        //Cancel a reservation by room number
+        static void CancelReservation()
             {
                 Console.Write("Enter room number to cancel: ");
                 if (!int.TryParse(Console.ReadLine(), out int roomNumber)) return;
@@ -437,8 +440,8 @@ namespace hotelOOP
                 {
                     foreach (var res in reservationList)
                     {
-                        writer.WriteLine($"{res.GstName}|{res.ReserverRoom.roomNumber}|{res.ReserverRoom.roomType}|{res.ReserverRoom.price}|{res.Nights}|{res.Date}");
-                    }
+                    writer.WriteLine($"{res.GstName}|{res.ReserverRoom.roomNumber}|{res.ReserverRoom.roomType}|{res.ReserverRoom.price}|{res.Nights}|{res.StartDate:yyyy-MM-dd}");
+                }
                 }
             }
             static void SaveData()
@@ -446,49 +449,29 @@ namespace hotelOOP
                 File.WriteAllLines("rooms.txt", roomList.Select(r => r.ToFileString()));
                 File.WriteAllLines("reservations.txt", reservationList.Select(res => res.ToFileString()));
             }
-            // Load reservations from a file
-            static void LoadReservationsFromFile()
+      
+
+
+        static bool IsRoomAvailable(Room room, DateTime startDate, int nights)
+        {
+            DateTime endDate = startDate.AddDays(nights);
+            foreach (var reservation in reservationList)
             {
-                if (!File.Exists(reservationFilePath)) return;
-
-                using (StreamReader reader = new StreamReader(reservationFilePath))
+                if (reservation.ReserverRoom.roomNumber == room.roomNumber)
                 {
-                    string line;
-                    while ((line = reader.ReadLine()) != null)
+                    if (!(endDate <= reservation.StartDate || startDate >= reservation.EndDate))
                     {
-                        string[] parts = line.Split('|');
-                        if (parts.Length == 6)
-                        {
-                            string name = parts[0];
-                            int roomNumber = int.Parse(parts[1]);
-                            string type = parts[2];
-                            double price = double.Parse(parts[3]);
-                            int nights = int.Parse(parts[4]);
-                            DateTime date = DateTime.Parse(parts[5]);
-
-                            Room existingRoom = roomList.Find(r => r.roomNumber == roomNumber);
-                            if (existingRoom == null)
-                            {
-                                existingRoom = new Room(roomNumber, type, price, false);
-                                roomList.Add(existingRoom);
-                            }
-
-                            Reservation r = new Reservation(name, existingRoom, nights);
-                            r.Date = date;
-                            reservationList.Add(r);
-                        }
+                        return false; // Date range overlaps
                     }
                 }
             }
-
-          
-
-
-         
-
+            return true;
         }
 
-        static void LoadData() // Declared as static method of the Program class
+
+    }
+
+    static void LoadData() // Declared as static method of the Program class
         {
             if (File.Exists("rooms.txt"))
             {
@@ -506,8 +489,21 @@ namespace hotelOOP
                 }
             }
         }
+    // Load reservations from a file
+    static void LoadReservationsFromFile()
+    {
+        if (File.Exists(reservationFilePath))
+        {
+            foreach (var line in File.ReadAllLines(reservationFilePath))
+            {
+                Reservation res = Reservation.FromFileString(line);
+                reservationList.Add(res);
+            }
+        }
     }
 }
+
+
 
 
 
